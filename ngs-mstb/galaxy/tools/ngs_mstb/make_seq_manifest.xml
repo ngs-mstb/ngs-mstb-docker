@@ -1,0 +1,182 @@
+<tool id="make_seq_manifest" 
+    name="Generate manifest for NGS (paired-end) sequence files"
+    profile="17.05"
+    version="1.0.2">
+    <description>Create a tabular file from a directory on the server
+        containing multiple datasets with NGS reads. The file will list sample IDs and relative
+        file paths. This is a required input to the target gene extraction tool.
+    </description>
+    <requirements>
+        <requirement type="package" version="1.0">ngs-mstb</requirement>
+    </requirements>
+    <command><![CDATA[
+        @CHEETAH_LIB@
+        python -m MICGENT.workflow_util
+        --config '$__tool_directory__/ngs_mstb.yaml'
+        iterate-sequence-run
+        $bind_arg("out_file")
+        --out-file-format csv
+        $cond_preset.adv.dir_name_is_sample_id
+        $bind_arg("cond_preset.adv.input_seqfile_ext")
+        $bind_arg("cond_preset.forward")
+        $bind_arg("cond_preset.reverse")
+        $bind_arg("cond_preset.samp_id_extractor")
+        $bind_arg("cond_preset.adv.sample_id_prefix")
+        $bind_arg("cond_preset.adv.samp_id_nomatch")
+        $bind_arg("out_file_rejected")
+        '$cond_preset.path'
+        &&
+        $compute_sig($out_file)        
+        ]]>
+    </command>
+    <macros>
+        <!-- Indent the next import tag to the start of the line to avoid getting extra indents
+        from the imported Cheetah functions, which can break generated YAML configs -->
+<import>ngs_mstb.xml</import>
+<import>preset.xml</import>
+        <token name="@OUTPUT_LABEL@">on (${cond_preset.path})</token>
+        <xml name="macro_validated_mode_inputs" token_hide_options="false">
+            <param name="path" size="60" type="text" optional="false"
+                label="Wild card file path pattern"
+                help="This pattern should match all files that you want to include.
+                It should be relative to the data store root.
+                Example: test_data/rsv/INF2019_CTR/INF2019_CTR_NGS/*.fastq.gz.
+                See Help for alternative layout">
+                <!-- The Python tool code checks that the relative path passed from here is safe.
+                 The check is a bit more involved than simply rejecting .. in file names because
+                 .. can be simply a double dot in the file name itself, not the upper dir reference.
+                 -->
+                <sanitizer sanitize="false">
+                </sanitizer>
+            </param>
+
+            <param name="forward" size="20" type="text"
+                   label="Pattern to identify forward reads"
+                   value="_R1_"
+                help="Python regular expression; can match anywhere in the file name">
+                <sanitizer sanitize="false">
+                </sanitizer>
+            </param>
+
+            <param name="reverse" size="20" type="text"
+                   label="Pattern to identify reverse reads"
+                   value="_R2_"
+                help="Python regular expression; can match anywhere in the file name">
+                <sanitizer sanitize="false">
+                </sanitizer>
+            </param>
+
+            <param name="samp_id_extractor" size="20" type="text"
+                   label="Pattern to extract Sample ID from the file name"
+                   value="^[^_]+"
+                help="Python regular expression; should match from the start of the file name.
+                      Default pattern will extract INFRSVA1 from INFRSVA1_R1_.fastq.gz.
+                      Warning: If your pattern will end up extracting IDs that are numbers
+                      starting with zero such as 0111 from 0111_S001_L002_R1_001.fastq.gz,
+                      then you should add a letter prefix using the field under Advanced Options
+                      in this tool.">
+                <sanitizer sanitize="false">
+                </sanitizer>
+            </param>
+
+
+            <section name="adv" title="Advanced Options" expanded="False">
+
+                <param name="sample_id_prefix" size="20" type="text"
+                   label="Prefix to add to Sample ID"
+                       optional="true"
+                help="Optionally, prepend this string to the extracted Sample IDs. Prefix should start with a letter
+                      and contain letters, digits, _ . or -."/>
+
+                <param name="samp_id_nomatch" type="select" hidden="@HIDE_OPTIONS@"
+                       value="error"
+                   label="Action for non-extractable SampleIDs"
+                help="What to do if the path pattern matches any files that do not match the pattern that extracts Sample ID.
+                If you select 'warn' here, then you can use the Sample ID regular expression to further filter matching
+                path wildcards.">
+                    <option value="error">Error</option>
+                    <option value="warn">Warning</option>
+                </param>
+
+                <param name="dir_name_is_sample_id" type="boolean" hidden="@HIDE_OPTIONS@"
+                   label="Directory-per-sample layout"
+                   checked="false"
+                       truevalue="--dir-name-is-sample-id"
+                       falsevalue=""
+                help="Input files are in a layout with a subdirectory per sample (pair of FASTQ files). Path pattern must match those directories instead of individual files."/>
+
+
+            <param name="input_seqfile_ext" size="40" type="text" hidden="@HIDE_OPTIONS@"
+                   label="Extension to select sequencing files"
+                   value=".fastq.gz"
+                help="This is ignored unless your files are in a directory-per-sample layout"/>
+
+            </section>            
+        </xml>        
+    </macros>
+    <inputs>
+      <expand macro="preset_inputs_make_seq_manifest"/>        
+    </inputs>
+	<outputs>
+        <data name="out_file_rejected" format="tabular"
+            label="File names that did not match the SampleID extractor pattern @OUTPUT_LABEL@"/>
+        <data name="out_file" format="tabular"
+            label="Sample manifest @OUTPUT_LABEL@"/>
+	</outputs>
+<help>
+What it does
+============
+
+Scans input directories on the server and prepares a manifest file with
+SampleID field and paths to the input files (FASTQ reads).
+
+Paths are relative to the storage directory on the server. They should not be edited
+further before this file is used to run the analysis.
+
+How to use the output
+=====================
+
+The output manifest file should be used as input to the
+analysis tools such as Extract target genes.
+
+This diagram shows the place of this tool in the overall NGS-MSTB workflow.
+
+.. image:: ${static_path}/images/ngs_mstb/wf_make_seq_manifest.png 
+    :width: 600
+
+-----------------
+
+Default vs Advanced options
+===========================
+
+This tool if very flexible, allowing to find files across multiple directories using
+shell wildcards
+and extract Sample IDs from the file names based on regular expression patterns.
+
+However, the most "standard" file layout and selection protocol will require you
+to only set a single parameter - the Wild card file path pattern.
+
+The "standard" layout is a single directory with multiple pairs of forward and reverse
+reads named like these::
+
+    INFRSVA1_R1_.fastq.gz
+
+    INFRSVA1_R2_.fastq.gz
+
+Or like these::
+
+    SA3316_S104_L002_R1_001.fastq.gz
+
+    SA3316_S104_L002_R2_001.fastq.gz
+
+If you supply ``test_data/rsv/INF2019_CTR/INF2019_CTR_NGS/*.fastq.gz``, you will get a manifest like this::
+
+    SampleID  file1   file2
+
+    SA3316  test_data/rsv/INF2019_CTR/INF2019_CTR_NGS/INFRSVA1_R1_.fastq.gz  test_data/rsv/INF2019_CTR/INF2019_CTR_NGS/INFRSVA1_R2_.fastq.gz
+
+*Note*: You can use wild-cards anywhere in the path. For example, if your FASTQ files are spread across two subdirectories
+Run1 and Run2, you can use: ``test_data/SA/Run*/FASTQ/*.fastq.gz`` to get them all in one manifest.
+</help>
+</tool>
+

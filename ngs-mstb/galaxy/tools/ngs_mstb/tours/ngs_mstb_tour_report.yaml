@@ -1,0 +1,85 @@
+name: Galaxy NGS-MSTB Outputs Exercise
+description: Exploring the outputs of NGS-MSTB
+title_default: "Galaxy NGS-MSTB Outputs"
+## To reload tour during development, make a POST request from
+## Chrome DEV console:
+## fetch("/api/tours/ngs_mstb_tour",{method: 'POST',headers:{'X-Api-Key':api_key}})
+
+steps:
+
+    - title: "<b>Welcome to the Galaxy NGS-MSTB outputs example!</b>"
+      content: "This tour will walk you through exploring the outputs of the  NGS-MSTB assembly in Galaxy.<br><br>
+                Please read and follow the instructions in each popup window before clicking <b>'Next'</b>.
+                <br><br>
+                Click <b>'Prev'</b> in case you missed performing the necessary actions during any step.
+                Check that the mouse pointer is in fact over the button you need before clicking, as the
+                popup window shifts between steps."
+      backdrop: true
+    
+    - title: "<b>Scenario</b>"
+      content: "We have previously executed the assembly of eight Illumina NGS sequencing  datasets generated from two Respiratory Syncytial Virus samples. One sample contains RSV genome of subtype A, and another - of subtype B. Each sample was subject to four independent amplification and sequencing reactions . The amplification used four overlapping pairs of primers for each subtype in order
+      to cover the entire RSV genome. We have assembled 
+      each NGS dataset.<br>
+      Each sample was also previously sequenced on a Sanger platform. 
+      We have a single Sanger-derived contig for each sample covering the
+      entire genome.  Now we will look at the resulting Web report and compare the NGS consensus contigs with the corresponding Sanger contigs."
+      backdrop: true
+
+    - title: "<b>Overview</b>"
+      content: "We will go through the following:<br>
+                 <ul>
+                   <li>Step 1: Navigate to the Web report for the assembly</li>
+                   <li>Step 2: Look at the mapping of the consensus contigs for all datasets to Sanger contigs</li>
+                   <li>Step 3: Explore other aspects of the Web report</li>
+                 </ul>"
+      backdrop: true
+
+    - title: "<b>Step 1: Navigate to the Web report for the assembly</b>"
+      element: "#right .unified-panel-footer"
+      content: "You can proceed under one of the two <b>alternative</b> scenarios:<br>
+      <ul>
+      <li><b>Option 1</b>. You have previously went through the tour of using 
+      NGS-MSTB tools, executed the <b>Extract target genes...</b> tool and waited for the job
+      to complete. In that case, you should already have a finished (colored
+      green) dataset named <b>Diagnostic Web report...</b> at the top of your history panel on the right side of the Galaxy window.<br>
+      To inspect the results, click on the <b>eye icon</b> next to the dataset name.
+      </li>
+      <li><b>Option 2</b>. You do not want to wait for the assembly to run. You just want to look
+      at the output report. In that case, you can click on this link to the 
+      <b><a href=\"/static/example_out/rsv-wg-vs-sanger/browser_contigs.html\" target=\"galaxy_main\">report that we computed</a> previously</b>.
+      </li>
+      </ul>
+      In either case, after clicking as instructed, you should see in the central Galaxy panel eight rows of the output manifest
+      describing assembly metrics for the final contigs. 
+      If you are looking at the outputs of your own tour of the NGS-MSTB tools and you opted for the more restrictive wildcard in the Step 2 of that tour, you will see two rows of metrics.<br>
+      <i>Tip</i>: when looking 
+      at your own output reports outside of this interactive tour, you can instead
+      right-click on the <b>eye icon</b> and open the <b>'Web report...'</b> in the new browser tab in order to use the full width of the browser window."
+      position: "bottom"
+
+    - title: "<b>Step 2: Look at the mapping of the consensus contigs for all datasets to Sanger contigs</b>"
+      element: "#right .unified-panel-footer"
+      content: "In the Web report window, click on the tab <b>Sequences</b>,
+      and repeatedly select in the <b>ref</b> field pull-down either RSVA or RSVB Sanger contigs as the
+      genome browser references. For both RSV subtypes, you should see
+      four NGS assembled contigs aligned to the Sanger references over the
+      full 15.2 Kbp length of the RSV genome without any variation. This
+      will mean that the NGS assemblies are identical to the Sanger-derived
+      assemblies (possibly with compatible ambiguous nucleotide bases)."
+      position: "bottom"
+
+    - title: "<b>Step 3: Explore other aspects of the Web report</b>"
+      element: "#right .unified-panel-footer"
+      content: "Further explore the functionality of the Web report by clicking on various tabs and following the help tips at the top of
+      each tab window.<br>
+      <b>Note</b>: when looking at the reads mapped to either
+      assembly or reference, please keep in mind that the references shown are
+      the best matching recruiting references, which were the unrelated RSV genomes from the
+      NCBI rather than the Sanger contigs. Therefore, you will see variations relative to these NCBI references. If you want to explore the differences
+      with the Sanger contigs at the read level, you can rerun the assembly by
+      following the steps in the <i>using NGS-MSTB tools</i> tour but providing
+      Sanger contigs as both recruiting (Prepare Ariba reference pack tool) and common QC references (Extract target genes tool)."
+      position: "bottom"              
+
+    - title: "<b>Done with the exploration of the NGS-MSTB output Web report</b>"
+      content: "Thanks for taking this tour!"

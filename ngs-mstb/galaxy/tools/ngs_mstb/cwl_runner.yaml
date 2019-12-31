@@ -1,0 +1,18 @@
+run_toil:
+  dep_resolver: /ngs-mstb/galaxy/tools/ngs_mstb/cwl_dep_resolver.yaml
+  outdir:
+  workdir:
+  restart: false
+  leave_workdir: false
+  clean_jobstore: true
+  runner_use_conda: true
+  runner_conda_root: /build/mc3
+  runner_conda_env: toil
+  runner_conda_activate: conda activate
+  dry_run: false
+  batchSystem: Slurm
+  retryCount: 5
+  max_wf_tries: 3
+  max_job_time: 43200
+  use_container: false
+  toil_args:

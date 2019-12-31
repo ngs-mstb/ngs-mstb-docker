@@ -1,0 +1,2 @@
+export NGS_MSTB_DOCKER_IMAGE=ngs-mstb-p
+export NGS_MSTB_DOCKER_TAG=2.5

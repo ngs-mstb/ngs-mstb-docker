@@ -1,0 +1,692 @@
+<tool id="gene_extractor"
+      name="Extract target genes from NGS datasets"
+      profile="17.05"
+      version="1.0.0">
+    <description>Perform targeted assembly of NGS reads matching a set of reference sequences,
+        as well as generate tables, plots and genome browser views for QC.
+    </description>
+    <requirements>
+        <requirement type="package" version="1.0">ngs-mstb</requirement>
+    </requirements>
+    <configfiles>
+        <configfile name="cwl_inputs">
+        @CHEETAH_LIB@
+        $bind_arg_yaml("cond_preset.cond_assembly_policy.section_adv.assembly_cov")
+        $bind_arg_yaml("cond_preset.cond_assembly_policy.section_adv.assembly_cov_min")
+        $bind_arg_yaml("cond_preset.cond_assembly_policy.section_adv.section_adv_ariba.gene_nt_extend")
+        $bind_arg_yaml("cond_preset.cond_assembly_policy.section_adv.section_adv_ariba.nucmer_min_id")
+        $bind_arg_yaml("cond_preset.cond_assembly_policy.section_adv.section_adv_ariba.nucmer_min_len")
+        $bind_arg_yaml("cond_preset.cond_assembly_policy.section_adv.section_adv_ariba.nucmer_breaklen")        
+        $bind_arg_yaml("cond_preset.section_trim.read_minlen")
+        $bind_arg_yaml("cond_preset.section_trim.qc_samplerate")        
+        $bind_arg_yaml("cond_preset.section_trim.clumpify")
+        $bind_arg_yaml("cond_preset.section_trim.filter_spikes")
+        $bind_arg_yaml("cond_preset.section_out_filt.cut_to_ref")
+        $bind_arg_yaml("cond_preset.section_out_filt.one_seq_per_contig")        
+        $bind_arg_yaml("cond_preset.section_out_filt.pad_gene")        
+        $bind_arg_yaml("cond_preset.section_out_filt.pad_assembled")
+
+        ## need to use 'global' for the new variable to be visible to getVar in our Cheetah defs
+        #set global $cond_assembler = $cond_preset.cond_assembly_policy.section_adv.cond_assembler
+
+        #if $cond_assembler.assembler
+
+        $bind_arg_yaml("cond_assembler.assembler")
+
+        #if $cond_assembler.assembler == "spades"
+
+        $bind_arg_yaml("cond_assembler.spades_mode")
+        $bind_arg_yaml("cond_assembler.spades_options")
+
+        #else if $cond_assembler.assembler == "plugin"
+
+        plugin_asm_options : >
+            python -m MICGENT.ariba_asm_plugin asm-for-skewed-coverage --extra-args '{
+            deterministic: true,
+            $bind_arg_yaml_dense("cond_assembler.section_plugin_iter.minlen_list",$val_open="[",$val_close="],")
+            $bind_arg_yaml_dense("cond_assembler.section_plugin_iter.norm_target_list",$val_open="[",$val_close="],")
+            $bind_arg_yaml_dense("cond_assembler.spades_mode")
+            $bind_arg_yaml_dense("cond_assembler.pilon_mindepth")
+            $bind_arg_yaml_dense("cond_assembler.section_plugin_amplicon_pilon_iupac.pilon_iupacminfreq")
+            $bind_arg_yaml_dense("cond_assembler.section_plugin_amplicon_pilon_iupac.pilon_iupacminqualsum")
+            }'
+
+        #end if
+        #end if
+        </configfile>
+    </configfiles>
+    <command><![CDATA[
+    @CHEETAH_LIB@
+        $check_sig($cond_preset.prepareref_tgz)
+        &&
+        $check_sig($cond_preset.manifest)
+
+        &&
+
+        python -m MICGENT.gene_extractor
+        --config '$__tool_directory__/ngs_mstb.yaml'
+        run-extraction-wf
+        --deterministic
+        $bind_arg("cwl_inputs")
+        $bind_arg("cond_preset.prepareref_tgz")
+        $bind_arg("cond_preset.manifest")
+        $bind_arg("cond_preset.ref_common")
+        $bind_arg("sor_pack_out")
+        $bind_arg("seq_out")
+        $bind_arg("manifest_out")
+        $bind_arg("web_tar_out")
+        $bind_arg("web_index_html_out.extra_files_path","--web-dir-out")
+        --filter-asm-args '{
+        "policy":default,
+        $bind_arg_yaml_dense("cond_preset.section_out_filt.ctg_len_min")
+        $bind_arg_yaml_dense("cond_preset.section_out_filt.ctg_cov_ratio_min")
+        $bind_arg_yaml_dense("cond_preset.section_out_filt.ctg_cov_min")
+        $bind_arg_yaml_dense("cond_preset.section_out_filt.ctg_ref_bases_min")
+        $bind_arg_yaml_dense("cond_preset.section_out_filt.ctg_ref_bases_ratio_min")
+        $bind_arg_yaml_dense("cond_preset.section_out_filt.multiseq_policy")        
+        }'
+        $bind_arg("cond_preset.section_sor_sfx.sor_sfx_target")
+        $bind_arg("cond_preset.section_sor_sfx.sor_sfx_version")
+        $bind_arg("cond_preset.section_trim.primer_literals")
+        $bind_arg("cond_preset.section_trim.adapter_file")
+        $bind_arg("cond_preset.section_trim.spikes_file")
+        $bind_arg("cond_preset.cond_assembly_policy.assembly_policy")
+
+        &&
+
+        cp '$web_index_html_out.extra_files_path/browser_contigs.html' '$web_index_html_out'
+
+        &&
+        
+        $compute_sig($sor_pack_out)
+
+        &&
+
+        $galaxy_provenance_out($galaxy_provenance,'provenance/gene_extractor')
+
+    ]]>
+    </command>
+    <macros>
+        <!-- ATTENTION: Indent the next import tag to the start of the line to avoid getting extra indents
+        from the imported Cheetah functions, which can break generated YAML configs -->
+<import>ngs_mstb.xml</import>
+<import>preset.xml</import>
+        <token name="@OUTPUT_LABEL@">on ${on_string} (${cond_preset.prepareref_tgz.name}, ${cond_preset.manifest.name})</token>
+        <xml name="macro_adv_par" token_assembly_cov="100"
+             token_assembler_spades="false" token_assembler_fermilite="false" token_assembler_plugin="false"
+             token_hide_options="false"
+        >
+            <section name="section_adv" title="Advanced Options" expanded="false">
+                <!-- These should go to YAML CWL input file -->
+                <param name="assembly_cov" type="integer" label="Read subsampling depth" hidden="@HIDE_OPTIONS@"
+                       optional="true"
+                       value="@ASSEMBLY_COV@"
+                       help="After recruiting reads to each reference, randomly subsample reads to this average depth before performing the assembly.
+               Note that for amplicon-derived datasets characterized by a very uneven depth of coverage and to be
+               assembled under 'Shotgun amplicon' policy, this parameter will be set to a very high, essentially unlimited
+               value because this policy internally will perform multiple rounds of digital coverage normalization that
+               needs to see the full set of recruited reads as its input. It is highly recommended to keep such large default
+               value when it is suggested by this form.">
+                    <validator type="in_range" min="0" exclude_min="true"/>
+                </param>
+                <param name="assembly_cov_min" type="integer" value="10" label="Minimum estimated coverage depth" hidden="@HIDE_OPTIONS@"
+                       help="If the estimated coverage depth of the longest reference in a reference cluster after read
+                       recruitment is less than this value, the assembly of that cluster will not be attempted.
+                       The field AsmMsg in the output manifest will show a warning. This filter is introduced in
+                       order to
+                       avoid spending time on doing low-coverage assemblies when, due to the local similarity between
+                       different references, some reads are recruited to the the cluster of references that
+                       are not actually present in the sample. The coverage is computed before subsampling
+                       the reads.">
+                    <validator type="in_range" min="0"/>
+                </param>
+                <section name="section_adv_ariba" title="Even More Advanced Ariba Options" expanded="false">
+                  <param name="gene_nt_extend" type="integer" value="30" label="Extend gene matches to find start/stop codons" hidden="@HIDE_OPTIONS@"
+                         help="Max number of nucleotides to extend ends of gene matches to look for start/stop codons">
+                      <validator type="in_range" min="0"/>
+                  </param>
+                  <param name="nucmer_min_id" type="integer" value="90" label="Minimum Nucmer alignment identity (delta-filter -i)" hidden="@HIDE_OPTIONS@">
+                      <validator type="in_range" min="0" max="100"/>
+                  </param>                                
+                  <param name="nucmer_min_len" type="integer" value="20" label="Minimum Nucmer alignment length (delta-filter -l)" hidden="@HIDE_OPTIONS@">
+                      <validator type="in_range" min="0"/>
+                  </param>                                
+                  <param name="nucmer_breaklen" type="integer" value="200" label="Value to use for -breaklen when running Nucmer" hidden="@HIDE_OPTIONS@">
+                      <validator type="in_range" min="0"/>
+                  </param>                                
+                </section>
+                <conditional name="cond_assembler">
+                    <param name="assembler" type="select" label="Assembler" hidden="@HIDE_OPTIONS@"
+                           optional="true"
+                           help="Assembler to use within Ariba">
+                        <option value="spades" selected="@ASSEMBLER_SPADES@">Spades</option>
+                        <option value="fermilite" selected="@ASSEMBLER_FERMILITE@">Fermilite Ariba default</option>
+                        <option value="plugin" selected="@ASSEMBLER_PLUGIN@">Plugin shotgun amplicon assembler</option>
+                    </param>
+                    <when value="spades">
+                        <param name="spades_mode" type="select" label="Spades Assembler Mode" hidden="@HIDE_OPTIONS@"
+                               help="If Spades is selected by Assembly Policy or Assembler,
+                 use this flavor of the assembly. This will also
+                 invisibly set some sensible options for Spades.
+                 Note that although Single Cell and RNA modes might be useful for
+                 data with highly uneven depth of coverage such as viral amplicon
+                 sequencing, the recommended approach is to instead use 'Shotgun amplicon'
+                 selection for the Assembly Policy argument, which will trigger a more
+                 complicated workflow that internally also uses Spades and manages
+                 its own Spades options.">
+                            <option value="wgs" selected="true">Default WGS</option>
+                            <option value="sc">Single Cell</option>
+                            <option value="rna">RNA</option>
+                        </param>
+                        <param name="spades_options" size="80" type="text" label="Spades options" hidden="@HIDE_OPTIONS@"
+                               optional="true"
+                               help="If set, completely overrides the backend Spade command line options generated by the choice of 'Spades Assembler Mode',
+            except for --rna or --sc switches, which will still be kept as generated by the 'Spades Assembler Mode' choice.
+            Example: suppose that 'Spades Assembler Mode' is 'Single Cell'. If the field 'Spades options' is not defined,
+            then Spades will run with the command line options '--sc -k 33,55,77,99,127 --careful'.
+            If this field is set to '-k 127', then the command line options will become '--sc -k 127'."
+                        />
+                    </when>
+                    <when value="plugin">
+                        <!-- These go into ariba_asm_plugin asm_for_skewed_coverage -extra-args YAML string -->
+                        <section name="section_plugin_iter" title="Iteration control of plugin amplicon assembler"
+                                 expanded="true"
+                                 help="Assembly will be iterated over all combinations of parameter values in this section,
+                                 with all resulting assemblies passed on to Ariba for its standard selection
+                                 process of the best assembly.">
+                            <param name="minlen_list" size="80" type="text" label="Min read length targets" hidden="@HIDE_OPTIONS@"
+                                   optional="true" value="50,128,200"
+                                   help="Each value means an iteration of assembly process where reads are first filtered to this
+                           length. This is done after the initial length filtering that is in turn performed right after the trimming.
+                           This is applied before the digital normalization in each iteration. The current default list of values
+                           was picked for 250x2 MiSeq sequencing datasets. It will most likely have to be adjusted for the
+                           libraries that have different read lengths.
+                           Enter as a comma-separated list of integer numbers.">
+                            <!-- Python expression in validator tag is sensitive to the indent - keep it next to
+                            the preceding closing xml bracket. Be careful also with what Python operators need to be escaped
+                            with XML codes -->
+                                <validator type="expression"
+                                           message="Comma-separated list of positive integer values is required"
+                                    >value.strip() and all((int(_.strip()) > 0) for _ in value.split(","))</validator>
+
+                            </param>
+                            <param name="norm_target_list" size="80" type="text" label="Digital normalization targets" hidden="@HIDE_OPTIONS@"
+                                   optional="true" value="50,100,200"
+                                   help="Each value means an iteration of assembly process where reads are first normalized to this
+                           local k-mer depth. Enter as a comma-separated list of integer numbers.">
+                                <validator type="expression"
+                                           message="Comma-separated list of positive integer values is required"
+                                    >value.strip() and all((int(_.strip()) > 0) for _ in value.split(","))</validator>
+                            </param>
+                        </section>
+                        <param name="spades_mode" type="select" label="Spades Assembler Mode" hidden="@HIDE_OPTIONS@"
+                               help="It is recommended to keep the default Single Cell or, alternatively, use the RNA
+                           mode since the intended targets of this assembly are shotgun ampicon sequences
+                           with highly uneven coverage. This option will internally generate a pre-defined
+                           list of other Spades options. That list cannot be changed in this assembly mode.">
+                            <option value="sc" selected="true">Single Cell</option>
+                            <option value="rna">RNA</option>
+                            <option value="wgs">WGS</option>
+                        </param>
+                        <param name="pilon_mindepth" type="integer" label="Pilon minimum coverage depth" hidden="@HIDE_OPTIONS@"
+                               value="5"
+                               help="Minimum depth of base coverage for Pilon assembly polisher to apply fixes">
+                            <validator type="in_range" min="1"/>
+                        </param>
+                        <section name="section_plugin_amplicon_pilon_iupac" title="Pilon IUPAC ambiguity base calling"
+                                 expanded="true" help="Pilon will call a base when both frequency and quality sum conditions
+                                 are satisfied.
+                                 Progressively more ambiguous bases will be considered until the accumulated totals
+                                 are met, starting from unambiugous bases and up to and including N for a fully
+                                 ambiguous base. The intended targets of this polishing step are mixed samples containing
+                                 very closely related genomes as well as
+                                 samples with the regions of low coverage and higher error rates.">
+                            <param name="pilon_iupacminfreq" type="float" hidden="@HIDE_OPTIONS@"
+                                   label="Pilon minimum IUPAC consensus sum frequency"
+                                   value="0.7"
+                                   help="The accumulated frequency of the major alleles needs to reach this total before
+                   the corresponding IUPAC nucleotide code will be called. It is not recommended to set this parameter below
+                   the default value because the calling of the ambiguity codes would become too sensitive to random variations
+                   of relative coverage of the constituting genomes if the same mixed sample is sequenced again and reassembled.">
+                                <validator type="in_range" min="0" max="1"/>
+                            </param>
+                            <param name="pilon_iupacminqualsum" type="integer" hidden="@HIDE_OPTIONS@"
+                                   label="Pilon minimum IUPAC consensus sum quality"
+                                   value="150"
+                                   help="The accumulated quality of the major alleles needs to reach this total before
+                   the corresponding IUPAC nucleotide code will be called. The default value of 150 corresponds to the
+                   depth of five bases at quality 30.">
+                                <validator type="in_range" min="0"/>
+                            </param>
+                        </section>
+                    </when>
+                    <when value="fermilite">
+                    </when>
+                </conditional>
+            </section>
+        </xml>
+        <xml name="macro_validated_mode_inputs" token_hide_options="false"
+          token_assembly_policy_wgs_fermilite="true"
+          token_assembly_policy_wgs_spades="false"
+          token_assembly_policy_amplicon="false"
+          token_multiseq_policy_accept="true"
+          token_multiseq_policy_reject="false"
+        >
+        <param name="prepareref_tgz" format="ngs_mstb_ariba_refpack.tar" optional="false"
+               type="data"
+               label="Ariba reference pack"
+               help="Create it with 'Prepare Ariba reference pack' tool"
+        />
+        <param name="manifest" format="tabular" optional="false"
+               type="data"
+               label="Manifest file"
+               help="Create this input first with 'Generate manifest for NGS...' tool. 
+            This dataset must contain at least SampleID, file1 and
+            file2 fields, which are required for locating the input FASTQ files on the server and linking them with the
+            specified Sample IDs. The extraction tool will only process files listed in this input manifest."
+        />
+        <param name="ref_common" format="fasta" optional="false"
+               type="data"
+               label="Common reference for output QC"
+               help="This input dataset is only used to review the output sequences. It can be the same as the reference sequences used
+                 to build Ariba reference pack, a subset of those, the versions of those with more flanking
+                 sequence, or altogether different sequences. The extracted contigs for all samples will be aligned to these references and shown
+                 in a single genome browser view. Each contig will be aligned to one best matching sequence from the
+                 common reference set."
+        />
+        <section name="section_sor_sfx" title="SOR Sequence ID Suffix" expanded="true"
+                 help="This section adds a suffix to the sequence IDs in FASTA files generated for loading
+            into an external System Of Record (SOR). The output manifest file will include
+            a field SeqID containing the originally generated sequence ID, and a field SeqID_SOR
+            containing SeqID with an added SOR suffix and exactly matching the ID from the FASTA file.
+            The manifest fields will be used to link
+            manifest metadata records to the corresponding FASTA sequences in a 1-to-1 relationship.
+            Example: if SampleID field in the
+            manifest file equals SA1234, then SeqID might get generated by the assembly process as SA1234_2.
+            Then, if the
+            target suffix set here equals HLA, and version suffix equals 1, then SeqID_SOR (and the
+            FASTA ID) will become SA1234_2-HLA-1. A single original manifest record will be duplicated into
+            as many records as there are assembled sequences for that SampleID, with each record assigned a
+            unique SeqID.
+            These suffixes allow versioning of output sequence IDs between targets and assembly runs.">
+            <param name="sor_sfx_target" size="4" type="text" label="SOR SeqID target suffix"
+                   optional="true"
+                   help="If set to X, then output FASTA sequence ID will look like *-X-*">
+                <!-- To mark as invalid everything that does not match, full-length string regex ^$ is needed -->
+                <validator type="regex" message="Need alphanumeric value">^[a-zA-Z0-9]*$</validator>
+            </param>
+            <param name="sor_sfx_version" type="integer" label="SOR SeqID version suffix"
+                   optional="true"
+                   help="If set to 1, then output FASTA sequence ID will look like *-X-1">
+                <validator type="in_range" min="0"/>
+            </param>
+        </section>
+        <section name="section_out_filt" title="Post-assembly Filter" expanded="true">
+            <param name="multiseq_policy" type="select" label="Policy for 'mixed' samples" hidden="@HIDE_OPTIONS@"
+                   help="Defines what to do if a given sample has resulted in multiple output sequences
+                   still present after applying all other filters">
+              <option value="accept" selected="@MULTISEQ_POLICY_ACCEPT@">Accept all sequences</option>
+              <option value="reject" selected="@MULTISEQ_POLICY_REJECT@">Reject all sequences</option>
+            </param>
+            <param name="cut_to_ref" optional="true" checked="false" hidden="@HIDE_OPTIONS@"
+                   truevalue="true" falsevalue="false"
+                   type="boolean"
+                   label="Trim contigs to the matched reference regions"
+                   help="Ariba outputs three types of output sequences for each sample: - ORFs (if reference
+                   was labeled as a gene); - matched reference regions; - entire assembled
+                   contigs. If found, we always return ORF as the first priority, optionally
+                   padded. If ORF is not found for a given
+                   reference cluster, and this option is checked, the matching region(s) (with optional padding) 
+                   will be returned. If this option is not checked, the entire contig will be
+                   returned. **Activate this option carefully**. Although it can make the output tidier by
+                   trimming the longer contig to the contiguous match in the reference, it can also 
+                   break a good contig
+                   in two if the contig contains a large insertion such as a transposon in the middle of the
+                   target region. The pieces then will get filtered out by the length-related
+                   predicates below, and you will not get any final output sequences for that reference.
+                   If more than one matching contig has been built (sample is a mixed culture), you
+                   might get both ORF and match or contig outputs. The type of extracted sequence will be
+                   identified by the field SeqStatus in the output manifest: {gene|match|asm}."
+            />
+            <param name="one_seq_per_contig" optional="true" checked="false" hidden="@HIDE_OPTIONS@"
+                   truevalue="true" falsevalue="false"
+                   type="boolean"
+                   label="Select no more than one output sequence per contig"
+                   help="If more than one gene or matching region are found in a given
+                   contig for a given reference, only output a single longest sequence.
+                   Use this when you are not expecting true tandem repeats composed of your
+                   entire target sequence, but are expecting chimeric PCR constructs or equivalent 
+                   assembly artefacts. This might be the case in the viral
+                   amplicon sequencing."
+            />            
+            <param name="pad_gene" type="integer" label="Padding for detected matching genes (ORFs)" hidden="@HIDE_OPTIONS@"
+                   value="200"
+                   help="Extend
+                   the returned extracted ORFs by this many bases on both sides of the match
+                   in the contig.
+                   This might mitigate the potential inaccuracies in ORF detection for sequences that are novel relative to the best-matching reference, and let you use
+                   downstream gene detection tools in a supervised manner.">
+                <validator type="in_range" min="0"/>
+            </param>                        
+            <param name="pad_assembled" type="integer" label="Padding for trimmed matching regions" hidden="@HIDE_OPTIONS@"
+                   value="200"
+                   help="If 'Trim contigs to the matched reference' is enabled above, extend
+                   the returned extracted regions by this many bases on both sides of the match
+                   in the contig.
+                   This might mitigate the danger of trimming to the match for sequences that are
+                   novel relative to the best-matching reference.">
+                <validator type="in_range" min="0"/>
+            </param>            
+            <param name="ctg_ref_bases_min" type="integer" label="Minimum number of reference bases assembled" hidden="@HIDE_OPTIONS@"
+                   value="1"
+                   help="Filter out assemblies that cover less than this length of the reference">
+                <validator type="in_range" min="1"/>
+            </param>
+            <param name="ctg_ref_bases_ratio_min" type="float" label="Minimum fraction of reference assembled" hidden="@HIDE_OPTIONS@"
+                   value="0.75"
+                   help="Filter out assemblies that cover less than this fraction of the reference length">
+                <validator type="in_range" min="0"/>
+            </param>            
+            <param name="ctg_len_min" type="integer" label="Minimum sequence length" hidden="@HIDE_OPTIONS@"
+                   value="1"
+                   help="Filter out sequences below this length. This is applied to the final
+                   output sequences after optional trimming to the reference and padding as
+                   controlled by the corresponding parameters earlier in this form.">
+                <validator type="in_range" min="1"/>
+            </param>
+            <param name="ctg_cov_min" type="integer" label="Minimum contig coverage" hidden="@HIDE_OPTIONS@"
+                   value="20"
+                   help="Filter out contigs below this mean coverage depth. The coverage
+                   is computed on the entire contig, before any trimming and padding are applied.">
+                <validator type="in_range" min="0"/>
+            </param>
+            <param name="ctg_cov_ratio_min" type="float" label="Minimum contig coverage ratio" hidden="@HIDE_OPTIONS@"
+                   value="0.05"
+                   help="If the alternative assemblies for a given sample still remain after length and coverage cutoffs have been applied (likely a
+               mixed sample situation), then sum up the contig coverage depths of the remaining sequences and filter out sequences with the contig coverage depths
+               below this ratio of the total. This removes those low-abundant components of the mixture that were assembled into
+               separate alternative contigs.">
+                <validator type="in_range" min="0"/>
+            </param>
+        </section>
+        <section name="section_trim" title="Read trimming and filtering" expanded="true">
+            <param name="read_minlen" type="integer" value="50" label="Minimum read length after trimming" hidden="@HIDE_OPTIONS@"
+                   help="Reads that become shorter than this during cleaning and trimming will get 
+                   immediately discarded. This is done before generating the after-trimming QC report and recruiting to the reference.">
+                <validator type="in_range" min="12"/>
+            </param>          
+            <param name="primer_literals" size="80" type="text" label="Primers" hidden="@HIDE_OPTIONS@"
+                   optional="true"
+                   help="PCR primers to trim, as comma-separated strings, possibly with IUPAC ambiguity codes.
+               To account for 'read-through' situations, each primer will
+            be searched in both forward and reverse-complemented orientations on both sides of each read.
+            Example input value: AGTGTTCAAYTTYGTWCCYTG,YTACCATTCAAGCAATGACCTC. Leave empty if this is not
+            amplicon data.">
+                <validator type="expression"
+                           message="Comma-separated list of primer sequences composed of valid IUPAC nucleotide codes is required"
+                    >all(set(_).issubset(set("ATCGatcgMRWSYKVHDBNmrwsykvhdbn")) for _ in value.split(","))</validator>
+            </param>
+            <param name="adapter_file" format="fasta" optional="true" hidden="@HIDE_OPTIONS@"
+                   type="data"
+                   label="Adaptor sequences to trim"
+                   help="Adaptor sequences to trim from the input reads, as a FASTA file. 
+                   If no dataset is provided here,
+               we will search all standard Illumina adaptors as distributed with BBTools
+               package. If you want to disable adaptor trimming altogether, provide here an
+               actual dataset that has no sequences in it (empty file). Note that the untrimmed
+               read-through adaptors left in high numbers can very negatively affect the 
+               downstream de-novo assembly step."
+            />
+            <param name="clumpify" optional="true" checked="false" hidden="@HIDE_OPTIONS@"
+                   truevalue="true" falsevalue="false"
+                   type="boolean"
+                   label="Filter optical duplicates"
+                   help="Perform reference-independent filtering of optical duplicates
+                   using clumpify tool from BBTools package. Testing on both WGS microbial and
+                   shotgun amplicon viral datasets has shown that this is typically not
+                   needed. It is computationally relatively expensive. Leave this off
+                   unless you have identified that it is necessary for a specific
+                   dataset."
+            />                        
+            <param name="filter_spikes" optional="true" checked="false" hidden="@HIDE_OPTIONS@"
+                   truevalue="true" falsevalue="false"
+                   type="boolean"
+                   label="Filter spiked sequences"
+                   help="Filter out PhiX or other sequencing spikes from the input reads.
+                   Because the reads will be recruited to the provided references afterwards
+                   anyway, this filtering step in usually not needed. It is computationally 
+                   relatively expensive. Leave it off unless your target sequences are
+                   taxonomically close (within 20% nucleotide identity) to your spikes."
+            />            
+            <param name="spikes_file" format="fasta" optional="true" hidden="@HIDE_OPTIONS@"
+                   type="data"
+                   label="Spiked sequences to filter out"
+                   help="PhiX or other sequencing spikes to filter out from the input reads,
+                   as a FASTA file.
+               If no dataset is provided here, and the option to filter spikes is checked,
+               PhiX sequences as used in Illumina kits will be searched."
+            />
+            <param name="qc_samplerate" type="float" label="Subsampling rate for read QC report" hidden="@HIDE_OPTIONS@"
+                   value="0.1"
+                   help="To save time, FASTQC report will be generated using only that fraction of the
+                   total number of reads in each sample. Note that this subsampling might bias the 
+                   read duplication metrics computed by FASTQC. Other metrics such as base quality
+                   profiles and adaptor content should not get any bias. Note that if you choose
+                   to run FASTQC on the full dataset (by setting this parameter to 1.0), the time to
+                   perform this QC step will approach the time spent on the assembly itself in the
+                   case of WGS microbial inputs when processed with the default assembly policy.">
+                <validator type="in_range" min="0" max="1"/>
+            </param>
+
+        </section>
+        <conditional name="cond_assembly_policy">
+            <param name="assembly_policy" type="select" label="Assembly Policy" hidden="@HIDE_OPTIONS@"
+                   help="Broad assembly policy that sets default values for several
+            more specific parameters tuned to the expected type of input data. Typically, the best policy for
+            the whole-genome shotgun sequencing of bacteria is 'WGS with default Ariba assembler', and for shotgun amplicon
+            sequencing used for viruses - 'Shotgun of amplicons'. After selecting a value here, you can override some of the parameters
+            in the Advanced Options section, but this is usually not needed. You might be able to assemble certain
+            challenging WGS samples by picking 'Shotgun for amplicons' as well.">
+              <option value="wgs_fermilite" selected="@ASSEMBLY_POLICY_WGS_FERMILITE@">WGS with default Ariba assembler</option>
+              <option value="wgs_spades" selected="@ASSEMBLY_POLICY_WGS_SPADES@">WGS with Spades</option>
+              <option value="amplicon" selected="@ASSEMBLY_POLICY_AMPLICON@">Shotgun of amplicons</option>
+            </param>
+            <when value="wgs_spades">
+                <expand macro="macro_adv_par" assembly_cov="100" assembler_spades="true" hide_options="@HIDE_OPTIONS@"/>
+            </when>
+            <when value="amplicon">
+                <expand macro="macro_adv_par" assembly_cov="1000000000" assembler_plugin="true" hide_options="@HIDE_OPTIONS@"/>
+            </when>
+            <when value="wgs_fermilite">
+                <expand macro="macro_adv_par" assembly_cov="100" assembler_fermilite="true" hide_options="@HIDE_OPTIONS@"/>
+            </when>
+        </conditional>
+
+        </xml>        
+    </macros>
+    <inputs>
+      <expand macro="preset_inputs_gene_extractor"/>
+    </inputs>
+    <outputs>
+        <data name="sor_pack_out" format="ngs_mstb_radar_pack.tar"
+              label="Gene Extractor result pack @OUTPUT_LABEL@"/>
+        <data name="seq_out" format="fasta"
+              label="Extracted sequences @OUTPUT_LABEL@"/>
+        <data name="manifest_out" format="tabular"
+              label="Manifest matching the extracted sequences @OUTPUT_LABEL@"/>
+        <data name="galaxy_provenance" format="txt" 
+            label="Extraction-stage Galaxy provenance data @OUTPUT_LABEL@"/> 
+        <data name="web_tar_out" format="tar"
+              label="Archived diagnostic data @OUTPUT_LABEL@"/>
+        <data name="web_index_html_out" format="html"
+            label="Diagnostic Web report @OUTPUT_LABEL@"/>
+    </outputs>
+<help><![CDATA[
+What it does
+------------
+
+This is the main tool in the NGS-MSTB workflow. It takes as inputs the Ariba reference pack
+and the tab-delimited manifest with paths to the sequencing files. These inputs are prepared by the 
+other two tools in the NGS-MSTB suite. 
+
+This diagram shows the place of this tool in the overall NGS-MSTB workflow.
+
+.. image:: ${static_path}/images/ngs_mstb/wf_gene_extractor.png 
+    :width: 600
+
+-----------------
+
+This tool extracts target genes, other genomic regions or complete viral genomes from any number of NGS 
+sequencing samples by recruting reads to the references,
+performing multiple de-novo assembly of the clusters of recruited reads, and saving the assembled
+contigs that best match the references. This process for each sample is provided by the Ariba package 
+with a number of local customizations. The most important customization is that the internal
+assembly step of Ariba is replaced with a "plug-in" process that relies on the digital read depth normalization and 
+assembly polishing in
+order to handle the extreme variation of the local sequencing depth typical for NGS reads derived
+from the clinical PCR-amplified viral samples as well as possible mixed samples.
+
+Ambiguous consensus bases are generated with a locally modified Pilon tool for those regions of 
+the mixed genomes that the assembler was not be able to split into separate contigs.
+
+Filtering of assembly contigs is performed to satisfy contraints on the reference coverage as well as on the
+median read depth in absolute values and in relation to the alternative contigs.
+
+The tool saves tab-delimited manifests with the
+assembly metrics for the outputs, human-readable and computable provenance data sufficient to
+reproduce the results from the external inputs, and informational QC data to help in debugging assembly problems.
+
+Outputs for QC include genome browser viewers from all contigs alligned to the common reference down to individual
+reads in each sample aligned to either best matching reference or the contigs.
+
+The output sequences, the manifest and the provenance data are collected in an archive dataset that
+can be used for uploading the extracted data into the external System Of Record (SOR) in the context of
+the deployments validated according to the Good Clinical Practices (GCP).
+
+Outputs
+-------
+
+
+Diagnostic Web report
++++++++++++++++++++++
+
+This is a dynamic HTML viewer of the results. Click the eye icon on the dataset to browse the report. 
+It might take a few seconds 
+to load if your manifest had many samples. You can use 
+context menu on the eye icon (right mouse button click) to open the report in a new tab in order
+to utilize the full width of the window.
+
+Archived diagnostic Web report
+++++++++++++++++++++++++++++++
+
+Archived copy of diagnostic data for optional offline analysis. You can transfer this archive to
+some other system, expand it and present with any local Web server program that supports RANGE 
+queries and CURS. 
+
+For example, you can serve it with the Apache ``httpd`` that you run in a Docker
+container.
+
+Let us suppose that the archive file is called ``ArchivedWeb.tar`` for brevity sake, 
+and you have opened a ``*nix`` shell terminal in a directory where you placed the tar file. Then::
+
+    mkdir ArchivedWeb; cd ArchivedWeb; tar -xf ../ArchivedWeb.tar
+    docker run -dit --rm --name ge-viewer -p 8080:80 -v "$(pwd)":/usr/local/apache2/htdocs/ httpd:alpine
+
+The docker command will pull and run the image httpd:alpine from Docker Hub. The container runs the Apache Web server - 
+enough to view the assembly report.
+
+Open Chrome or Firefox browser at ``http://localhost:8080`` and click on the file ``browser_contigs.html``
+Replace the URL above with the IP or DNS name of the host where you started the Docker if it is not your current machine 
+where you will run the Web browser. If you are doing everything on the same computer, then keep 
+the ``localhost`` above.
+
+On Windows, you will have to adjust the commands accordingly to match whatever shell you are using
+there.
+
+Extraction-stage Galaxy provenance data
++++++++++++++++++++++++++++++++++++++++
+
+The provenance YAML file is generated when this tool runs. It describes the entire chain
+of jobs that led to the creation of these outputs by querying the provenance of the 
+inputs recursively.
+All tool parameters are saved both with their internal Galaxy variable names and the labels that
+the analyst saw when running the tools. The file can be used by the analyst to repeat in the UI 
+the entire processing at some later date.
+
+When another tool Upload to SOR is implemented by the local site and executed by the analyst
+after this extraction tool, another YAML file will be generated at that point in time and automatically
+sent to the SOR as part of the full provenance pack.
+
+Please see the comment section at the top of the dataset for more information about 
+its formatting and structure.
+
+Extracted sequences
++++++++++++++++++++
+
+Final assembled contigs (consensus sequences) that passed the post-assembly filtering
+criteria. Depending on the chosen filters, it is possible to have multiple contigs per
+each sample (record) in the input manifest. This can happen, for example, if the sample
+is a mixture of several genomes, or if there are several but not entirely identical copies
+of the target reference region in a single genome.
+
+Manifest matching the extracted sequences
++++++++++++++++++++++++++++++++++++++++++
+
+The records correspond 1-to-1 to the records in the Extracted Sequences FASTA file.
+See the Manifest Dictionary in the Web report for the description of the fields in 
+this table.
+
+Gene Extractor result pack
+++++++++++++++++++++++++++
+
+Archived result pack that can be stored in the SOR.
+This archive contains the workflow provenance data as well as
+the sample-level assembly status table for all input samples.
+
+The input FASTA files used to build that Ariba reference pack are
+saved inside the reference pack archive.
+
+If not using a locally implemented Upload to SOR tool, but simply downloading
+this result pack, you would need
+to additionally download the "Extraction-stage Galaxy provenance data" dataset
+for a complete provenance record.
+
+]]></help>
+<citations>
+<citation type="bibtex">@ARTICLE{Tovchigrechko20NGS-MSTB,
+author = {Andrey Tovchigrechko and Elizabeth Aspinal and Timothy Slidel and Hui Liu and Bin Lu and Alexey Ruzin and Robert Jan Lebbink and Hong Jin and Michael E. Abram and Mark T. Esser and David E. Tabor},
+title = {NGS-MSTB: Next Generation Sequencing Microbial Surveillance Toolbox for scalable de-novo assembly of viral genomes and bacterial genes},
+journal = {Submitted},
+year = {2020},
+url = {https://github.com/ngs-mstb/micgent}
+}</citation>
+<citation type="bibtex">@ARTICLE{hunt2017ariba,
+title={ARIBA: rapid antimicrobial resistance genotyping directly from sequencing reads},
+author={Hunt, Martin and Mather, Alison E and S{\'a}nchez-Bus{\'o}, Leonor and Page, Andrew J and Parkhill, Julian and Keane, Jacqueline A and Harris, Simon R},
+journal={Microbial genomics},
+volume={3},
+number={10},
+year={2017},
+publisher={Microbiology Society}
+}</citation>
+<citation type="bibtex">@ARTICLE{walker2014pilon,
+title={Pilon: an integrated tool for comprehensive microbial variant detection and genome assembly improvement},
+author={Walker, Bruce J and Abeel, Thomas and Shea, Terrance and Priest, Margaret and Abouelliel, Amr and Sakthikumar, Sharadha and Cuomo, Christina A and Zeng, Qiandong and Wortman, Jennifer and Young, Sarah K and others},
+journal={PloS one},
+volume={9},
+number={11},
+pages={e112963},
+year={2014},
+publisher={Public Library of Science}
+}</citation>
+<citation type="bibtex">@MISC{BBMapURL,
+author= {Brian Bushnell},
+year  = {2019},
+title = {BBMap},
+url  = {https://sourceforge.net/projects/bbmap/}, 
+note = {https://sourceforge.net/projects/bbmap/ Last accessed on 2019-12-18}
+}
+}</citation>
+</citations>
+</tool>
+

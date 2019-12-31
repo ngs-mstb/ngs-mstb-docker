@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<toolbox>
+  <section id="getext" name="Get Data">
+    <tool file="data_source/upload.xml" />
+  </section>
+  <section id="ngs_mstb" name="NGS Microbial Sequencing Toolbox">
+    <tool file="/ngs-mstb/galaxy/tools/ngs_mstb/ariba_prepareref.xml" />
+    <tool file="/ngs-mstb/galaxy/tools/ngs_mstb/make_seq_manifest.xml" />
+    <tool file="/ngs-mstb/galaxy/tools/ngs_mstb/gene_extractor.xml" />
+    <tool file="/ngs-mstb/galaxy/tools/ngs_mstb/radar_upload.xml" />
+  </section>
+</toolbox>

@@ -1,0 +1,51 @@
+version: '3'
+services:
+  galaxy-web:
+    image: ${NGS_MSTB_DOCKER_IMAGE}:${NGS_MSTB_DOCKER_TAG:-latest}
+    env_file:
+        - ${NGS_MSTB_DEPLOY_CONFIG_DIR}/common.env
+        - ${NGS_MSTB_SITE_CONFIG_DIR}/site.env
+    environment:
+        # In case the galaxy-init container is not used, you need to include "sleeplock" to NONUSE
+        - NONUSE=proftpd,condor
+        ## If enabling FTP, set this variable to external CNAME of the host
+        # - GALAXY_CONFIG_FTP_UPLOAD_SITE=
+        # - NONUSE=proftpd,postgres,slurmd,slurmctld
+        # - GALAXY_HANDLER_NUMPROCS=2
+        # - UWSGI_PROCESSES=4
+    ## Odd problem with the slurmctld - it refuses to start if we pass
+    ## the FQDN as hostname here. Things seems to work fine if we just
+    ## use a fixed short hostname `galaxy` for the container. Even the
+    ## certificates issues for the full real docker host FQDN work.
+    ## If needing to use a real name for some reason, pass here a short
+    ## alias, not FQDN.
+    #hostname: ${NGS_MSTB_HOSTNAME_SHORT}
+    hostname: galaxy
+    networks:
+      - galaxy
+    ports:
+        - "443:443"
+        - "80:80"
+    volumes:
+        - ${EXPORT_DIR}:/export
+        - ${EXPORT_LOGS_DIR}:/home/galaxy/logs
+        - ${SEQSTORE_DIR}:/seqstore/data
+        ## If you want to run unit tests, uncomment the two mounts
+        ## below, run ./docker_deploy.sh providing the respective
+        ## EXPORT_* vars, and then execute ngs_mstb_test_run.sh from
+        ## `docker exec`. In the current Docker version, these changes
+        ## could have been done with overlay docker-compose.yaml, but
+        ## RHEL 7.5 Docker does not recognize the overlay configs.
+        ## - ${EXPORT_DEV_MICGENT}:/home/galaxy/work/micgent
+        ## - ${EXPORT_TEST_DATA}:/home/galaxy/work/test_data
+        ## - ${EXPORT_TEST_RUN}:/home/galaxy/work/micgent/python/test_run
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+            - node.role == ${NODE_ROLE:-manager}
+    labels:
+        kompose.service.type: nodeport
+
+networks:
+    galaxy:

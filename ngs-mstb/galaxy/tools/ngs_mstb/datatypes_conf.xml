@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<datatypes>
+<registration converters_path="lib/galaxy/datatypes/converters" display_path="display_applications">
+    <!-- NGS-MSTB datatypes -->
+    <datatype extension="ngs_mstb_ariba_refpack.tar" type="galaxy.datatypes.binary:CompressedArchive" subclass="true" display_in_upload="true" description="A TAR archive with Ariba reference pack. You must manually select this 'File Format' if uploading into Galaxy with Get Data tool."/>
+    <datatype extension="ngs_mstb_radar_pack.tar" type="galaxy.datatypes.binary:CompressedArchive" subclass="true" display_in_upload="true" description="A TAR archive with RADAR upload pack. You must manually select this 'File Format' if uploading into Galaxy with Get Data tool."/>
+    <!-- End of NGS-MSTB datatypes -->
+</registration>
+</datatypes>

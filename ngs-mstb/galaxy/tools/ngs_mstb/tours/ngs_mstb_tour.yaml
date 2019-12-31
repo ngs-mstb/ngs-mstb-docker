@@ -1,0 +1,162 @@
+name: Galaxy NGS-MSTB Exercise
+description: The Galaxy NGS-MSTB introduces itself
+title_default: "Galaxy NGS-MSTB Introduction Exercise"
+## To reload tour during development, make a POST request from
+## Chrome DEV console:
+## fetch("/api/tours/ngs_mstb_tour",{method: 'POST',headers:{'X-Api-Key':api_key}})
+
+
+steps:
+
+    - title: "<b>Welcome to the Galaxy NGS-MSTB example!</b>"
+      content: "This tour will walk you through the basic exercise of using the  NGS-MSTB tools in Galaxy.<br><br>
+                Please read and follow the instructions in each popup window before clicking <b>'Next'</b>.
+                <br><br>
+                Click <b>'Prev'</b> in case you missed performing the necessary actions during any step.
+                Check that the mouse pointer is in fact over the button you need before clicking, as the
+                popup window shifts between steps."
+      backdrop: true
+    
+    - title: "<b>Scenario</b>"
+      content: "We have eight Illumina NGS sequencing  datasets generated from two Respiratory Syncytial Virus samples. One sample contains RSV genome of subtype A, and another - of subtype B. Each sample was subject to four independent amplification and sequencing reactions . The amplification used four overlapping pairs of primers for each subtype in order
+      to cover the entire RSV genome.<br>
+      Each sample was also previously sequenced on a Sanger platform. 
+      We have a single Sanger-derived contig for each sample covering the
+      entire genome. We will assemble 
+      each NGS dataset. In a follow-up interactive tour, we will compare the resulting consensus contigs with the corresponding Sanger contigs."
+      backdrop: true
+
+    - title: "<b>Goal</b>"
+      content: "The goal of this exercise is to <b>learn the steps</b>
+      of NGS-MSTB assembly workflow."
+      backdrop: true
+
+    - title: "<b>Overview</b>"
+      content: "We will go through the following:<br>
+                <b>Assemble all eight NGS datasets</b>
+                 <ul>
+                   <li>Step 1: Download two FASTA files, each with both RSV A and B full genome sequences, to your computer and then upload the files into Galaxy. The sequences in one file will be used as references to recruit reads, and the sequences in another file with Sanger-drived contigs will be used to align the final assembly contigs for QC</li>
+                   <li>Step 2: Use the first reference FASTA to build Ariba reference pack</li>
+                   <li>Step 3: Build manifest listing paths to NGS FASTQ files and sample IDs. The FASTQ files are distributed 
+                   with NGS-MSTB.</li>
+                   <li>Step 4: Run the extraction tool on the FASTQ manifest to assemble NGS reads into consensus FASTA contigs recruiting against Ariba reference pack and generate a Web report with
+                   final NGS contigs aligned against Sanger contigs.</li>
+                   <li>Step 6: Name your history</li> 
+                 </ul>"
+      backdrop: true
+
+    - title: "<b>Step 1: Download two FASTA files with RSV references</b>"
+      content: "To simplify the task of comparing the contigs against 
+      Sanger references, we will use the Sanger FASTA as common QC reference in the Web report. To demonstrate that the assembly is not sensitive to the choice of recruiting references, we use a FASTA file with RSV A and B genomes selected at random from the NCBI.<br>
+      Please <b>download</b> the file <a href=\"/static/example_out/rsv-wg-vs-sanger-refs/INFRSV_WG_AB_Sanger.fasta\" target=\"_blank\">'INFRSV_WG_AB_Sanger.fasta'</a> to your computer. Please do the same for the file <a href=\"/static/example_out/rsv-wg-vs-sanger-refs/ref_AB_singleWG_RSV.fasta\" target=\"_blank\">'ref_AB_singleWG_RSV.fasta'</a>
+      "
+      backdrop: true
+
+    - title: "<b>Step 1: Upload two FASTA files with RSV reference sequences into Galaxy</b>"
+      element: ".upload-button"
+      content: "This is the Get Data tool. You will use the 'Choose local file' button to upload both files into Galaxy.<br><br>
+              Click <b>'Next'</b> and the tour will take you to the proper button"
+      position: "right"
+      postclick:
+        - ".upload-button"
+
+    - title: "<b>Step 1: Upload FASTA files with RSV reference sequences into Galaxy</b>"
+      element: "#btn-local"
+      content: "This is the 'Choose local file' button.<br><br>
+              Simply click <b>'Next'</b> and tour will open up your file directory for you to select the previously downloaded <b>'INFRSV_WG_AB_Sanger.fasta'</b> and <b>'ref_AB_singleWG_RSV.fasta'</b>. In modern Chrome and Firefox browsers, you should be able to select both files at once in
+              the same selection dialog by holding down the Ctrl (Command on Mac) key and clicking with the mouse."
+      position: "top"
+      postclick:
+        - "#btn-local"
+
+    - title: "<b>Step 1: Upload FASTA files with RSV reference sequences into Galaxy</b>"
+      element: "#btn-start"
+      content: "Now that you've selected the files, select fasta as file format and leave the genome undefined.<br><br>
+              Click <b>'Next'</b> and the tour will <b>'Start'</b> the upload.<br>"
+      position: "bottom"
+      postclick:
+        - "#btn-start"
+        - "#btn-close"
+
+    - title: "<b>Step 1: Upload FASTA files with RSV reference sequences into Galaxy</b>"
+      element: "#right"
+      content: "This is your history!<br><br>
+              All <b>analysis steps will be recorded</b> and can be repeated if necessary.<br><br>
+              You should be able to see your uploaded files here in a few moments. Once they turn green, they are ready."
+      position: "left"
+
+    - title: "<b>Step 2: Use the first reference FASTA to build Ariba reference pack</b>"
+      element: "#tool-search-query"
+      content: "Click on the tool named 'Prepare Ariba reference pack'"
+      textinsert: "ngs_mstb"
+
+    - title: "<b>Step 2: Use the first reference FASTA to build Ariba reference pack</b>"
+      content: "<b>Follow this set of instructions once the tool is loaded:</b><br>
+              <ol>
+                <li>Parameter 'FASTA file with references': from pull-down menu, select <b>ref_AB_singleWG_RSV.fasta</b>. Make sure you select that one and <b>not</b> the <b>INFRSV_WG_AB_Sanger.fasta</b></li>
+                <li>Keep the rest of the options at their default values.</li>
+                <li>Click button <b>Execute</b> and wait for the tool to finish. The output datasets in the right panel should turn green.</li>
+              </ol>"      
+      position: "bottom"      
+
+    - title: "<b>Step 3: Build manifest listing paths to NGS FASTQ files and sample IDs</b>"
+      element: "#tool-search-query"
+      content: "Click on the tool named 'Generate manifest for NGS (paired-end) sequence files'"
+      textinsert: "ngs_mstb"
+
+    - title: "<b>Step 3: Build manifest listing paths to NGS FASTQ files and sample IDs</b>"
+      content: "<b>Follow this set of instructions once the tool is loaded:</b><br>
+              <ol>
+                <li>Parameter 'Wild card file path pattern': type the string<br> 
+                <b>test_data/rsv/INF2019_CTR/INF2019_CTR_NGS/*.fastq.gz</b><br> 
+                You can copy-paste it from here or from the Help text under the input field.</li>
+                <li>Keep the rest of the options at their default values.</li>
+                <li>Click button <b>Execute</b> and wait for the tool to finish.</li>
+              </ol>
+              <b>Note</b>: With this selection of datasets, the next assembly step will take about 1.5 hours on four CPU cores.
+              If you want to get the assembly done about four times faster,
+              you can use a more restrictive wildcard pattern:<br>
+              <b>test_data/rsv/INF2019_CTR/INF2019_CTR_NGS/INFRSV[AB]1*.fastq.gz</b><br>
+              This will select only two datasets - one for each RSVA and RSVB genome. You will not be able to see, though, that the
+              assembly outputs for different replicates of A and B are identical to each other."      
+      position: "bottom"      
+
+    - title: "<b>Step 3: Build manifest listing paths to NGS FASTQ files and sample IDs</b>"
+      element: '#current-history-panel'
+      content: "To inspect the resulting manifest, click on the <b>eye icon</b> next to the latest dataset named <b>'Sample manifest...'</b>. In the central Galaxy panel, you should see eight rows of sequencing file pairs listed in a table. If you opted for the more restrictive wildcard, you will see two rows of file pairs."
+      position: "left"              
+
+    - title: "<b>Step 4: Run the extraction tool on the FASTQ manifest to assemble NGS reads into consensus FASTA contigs</b>"
+      element: "#tool-search-query"
+      content: "Click on the tool named 'Extract target genes from NGS datasets'"
+      textinsert: "ngs_mstb"
+
+    - title: "<b>Step 4: Run the extraction tool on the FASTQ manifest to assemble NGS reads into consensus FASTA contigs</b>"
+      content: "<b>Follow this set of instructions once the tool is loaded:</b><br>
+              <ol>
+                <li>Parameters 'Ariba reference pack' and 'Manifest file' should be already pre-populated with the correspondingly named datasets which you have generated during the previous steps.</li>
+                <li>Parameter 'Common reference for output QC': from pull-down menu, select <b>INFRSV_WG_AB_Sanger.fasta</b>.
+                Make sure you select that one and <b>not</b> the <b>ref_AB_singleWG_RSV.fasta</b>. This will be the opposite to what you have selected in Step 2.</li>
+                <li>Keep the rest of the options at their default values.</li>
+                <li>Click button <b>Execute</b> and wait for the tool to finish. You will probably have to scroll down the tool form to see the <b>Execute</b> button. The run will take a while: on four CPU cores - about 1.5 hours. If on Step 3 you opted for listing a
+                single replicate per RSV subtype, then the execution should
+                be about four times faster.
+                <i>Warning</i>: if you were not logged in before
+                starting the tour, do not close your
+                browser window after you hit Execute, otherwise you will lose your work history.
+                If you were logged in, you can close the browser if you want, then open it later, navigate to the Galaxy URL and log in again (if necessary) to see your datasets.
+                </li>
+              </ol>"      
+      position: "bottom"
+
+    - title: "<b>Step 6: Name  your history </b>"
+      element: "#current-history-panel > div.controls > div.title > div"
+      content: "Change the name of your history."
+      position: "bottom"
+
+    - title: "<b>Done with the quick introduction into executing the NGS-MSTB workflow</b>"
+      content: "Thanks for taking this tour! Please proceed
+      with the next tour to explore the outputs of NGS-MSTB
+      assembly."
+      element: "#tool-search-query"
+      textinsert: ""

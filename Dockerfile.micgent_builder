@@ -1,0 +1,25 @@
+#ARG GAL_TAG=latest #not supported on RHEL 7.5 Docker
+FROM docker.io/bgruening/galaxy-stable:18.05
+ARG GIT_SSH_KEY
+ARG CONDA_INSTALLER="https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh"
+ARG GIT_NGS_MSTB="https://github.com/ngs-mstb/ngs-mstb.git"
+ARG GIT_MICGENT="https://github.com/ngs-mstb/micgent.git"
+ARG GIT_MICGENT_DB="https://github.com/ngs-mstb/micgent_db.git"
+RUN adduser --disabled-password --gecos '' --home /build build
+USER build
+WORKDIR /build
+ADD ${GIT_SSH_KEY} .ssh/
+RUN chmod go-wrx .ssh/*
+ADD $CONDA_INSTALLER ./
+RUN /bin/bash Miniconda3*.sh -b -p `pwd`/mc3
+RUN echo ". /build/mc3/etc/profile.d/conda.sh" >> ~/.bashrc
+RUN echo '. $HOME/.bashrc' >> ~/.profile
+RUN conda install -y git
+RUN git clone $GIT_NGS_MSTB
+RUN cd ngs-mstb && ./build.sh && ./install.sh
+RUN git clone $GIT_MICGENT
+RUN git clone $GIT_MICGENT_DB
+RUN cd micgent/python && mkdir test_run && ../scripts/ngs-mstb/run_tests_gene_extractor.sh ~
+RUN chmod -R go+rX mc3 micgent_db micgent
+#VOLUME ["/build"]
+

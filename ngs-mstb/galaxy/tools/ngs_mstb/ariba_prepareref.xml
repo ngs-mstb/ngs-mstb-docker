@@ -1,0 +1,331 @@
+<tool id="ariba_prepareref"
+    name="Prepare Ariba reference pack"
+    profile="17.05"
+    version="1.0.0">
+    <description>The reference pack is needed for running the target gene extraction tool.
+    </description>
+    <requirements>
+        <requirement type="package" version="1.0">ngs-mstb</requirement>
+    </requirements>
+    <command><![CDATA[
+        @CHEETAH_LIB@
+        ariba prepareref
+        $bind_arg_under("cond_preset.fasta")
+        #if $cond_preset.cond_all_coding.all_coding == "meta"
+        $bind_arg_under("cond_preset.cond_all_coding.metadata")
+        #else
+        $bind_arg_under("cond_preset.cond_all_coding.all_coding")
+        #end if
+        #if $cond_preset.cond_cluster.cluster == "no_cdhit"
+        --no_cdhit
+        #else if  $cond_preset.cond_cluster.cluster == "file"
+        $bind_arg_under("cond_preset.cond_cluster.cdhit_clusters")
+        #else
+        $bind_arg_under("cond_preset.cond_cluster.cdhit_min_id")
+        $bind_arg_under("cond_preset.cond_cluster.cdhit_min_length")
+        #end if
+        $bind_arg_under("cond_preset.section_adv.min_gene_length")
+        $bind_arg_under("cond_preset.section_adv.max_gene_length")
+        $bind_arg_under("cond_preset.section_adv.genetic_code")
+        ref
+        &&
+        cp '$cond_preset.fasta' ref/inputs.fasta
+        #if $cond_preset.cond_all_coding.all_coding == "meta"
+        && cp '$cond_preset.cond_all_coding.metadata' ref/inputs.metadata.txt
+        #end if
+        &&
+        python -m MICGENT.util dir-to-tar ref '$ref_pack'
+        &&
+        $compute_sig($ref_pack)
+        ]]>
+    </command>
+    <macros>
+        <!-- Indent the next import tag to the start of the line to avoid getting extra indents
+        from the imported Cheetah functions, which can break generated YAML configs -->
+<import>ngs_mstb.xml</import>
+<import>preset.xml</import>
+        <token name="@OUTPUT_LABEL@">on ${on_string} (${cond_preset.fasta.name})</token>
+        <xml name="macro_validated_mode_inputs" token_hide_options="false" token_all_coding="true" token_all_non_coding="false">
+        <param name="fasta" format="fasta"
+            type="data"
+            label="FASTA file with references"
+            help="Nucleotide reference sequences for the target gene or genomic region"
+        />
+        <conditional name="cond_all_coding" hidden="@HIDE_OPTIONS@">
+            <param name="all_coding" type="select" label="Sequences in FASTA are either all coding or all non-coding" hidden="@HIDE_OPTIONS@"
+                   help="Select All Coding or All Non-Coding if you only have a FASTA dataset with target sequences as input, and no
+                   corresponding reference sequence metadata table.">
+                <option value="yes" selected="@ALL_CODING@">All Coding</option>
+                <option value="no" selected="@ALL_NON_CODING@">All Non-Coding</option>
+                <option value="meta">Use Metadata Table</option>
+            </param>
+            <when value="meta">
+                <param name="metadata" format="tabular" hidden="@HIDE_OPTIONS@"
+                    type="data"
+                    label="Metadata table for reference sequences"
+                    help="See Help section and the included URLs of the Ariba documentation regarding the format of this
+                    table"
+                />
+            </when>
+            <when value="yes">
+            </when>
+            <when value="no">
+            </when>
+        </conditional>
+        <conditional name="cond_cluster" hidden="@HIDE_OPTIONS@">
+            <param name="cluster" type="select" label="How to build clusters from reference sequences" hidden="@HIDE_OPTIONS@"
+                   help="Similar sequences can be grouped into clusters. Each cluster will represent one read recruitment target
+                   when the resulting reference pack is used in gene extraction.">
+                <option value="no_cdhit" selected="true">No Clustering</option>
+                <option value="file">Use Cluster File</option>
+                <option value="cdhit">Run CD-HIT</option>
+            </param>
+
+            <when value="file">
+                <param name="cdhit_clusters" format="txt" hidden="@HIDE_OPTIONS@"
+                    type="data"
+                    label="File with pre-defined clusters in CD-HIT output format"
+                    help="See Help section and the included URLs of the Ariba documentation regarding the format of this
+                    file"
+                />
+            </when>
+            <when value="cdhit">
+                <param name="cdhit_min_id" type="float" hidden="@HIDE_OPTIONS@"
+                       value="0.9"
+                    label="CD-HIT sequence identity threshold"
+                    help="cd-hit option -c">
+                    <validator type="in_range" min="0" max="1" exclude_max="true" exclude_min="true"/>
+                </param>
+                <param name="cdhit_min_length" type="float" hidden="@HIDE_OPTIONS@"
+                       value="0.0"
+                    label="CD-HIT length difference cutoff"
+                    help="cd-hit option -s">
+                    <validator type="in_range" min="0"/>
+                </param>
+            </when>
+            <when value="no_cdhit">
+            </when>
+        </conditional>
+        <section name="section_adv" title="Advanced Options" expanded="false">
+            <param name="min_gene_length" type="integer" hidden="@HIDE_OPTIONS@"
+                   value="6"
+                label="Minimum gene length"
+                help="Minimum allowed length of reference genes in nucleotides">
+                <validator type="in_range" min="6"/>
+            </param>
+            <param name="max_gene_length" type="integer" hidden="@HIDE_OPTIONS@"
+                   value="40000"
+                label="Maximum gene length"
+                help="Maximum allowed length of reference genes in nucleotides">
+                <validator type="in_range" min="6"/>
+            </param>
+            <param name="genetic_code" type="select" hidden="@HIDE_OPTIONS@"
+              label="Genetic code">
+                <option value="11" selected="true">11</option>
+                <option value="1">1</option>
+                <option value="4">4</option>
+            </param>
+        </section>
+      </xml>
+    </macros>
+    <inputs>
+      <expand macro="preset_inputs_ariba_prepareref"/>
+    </inputs>
+	<outputs>
+        <data name="ref_pack" format="ngs_mstb_ariba_refpack.tar"
+            label="Ariba reference pack @OUTPUT_LABEL@"
+            help="Archived reference pack - supply it to the gene extraction tool"/>
+	</outputs>
+
+<help>
+
+What it does
+============
+
+Prepares Ariba reference pack. Most of the following help content was copied from the
+`Ariba Wiki page on GitHub &lt;https://github.com/sanger-pathogens/ariba/wiki/Task:-prepareref&gt;`_.
+The original Wiki text was then edited for a better alignment with our Galaxy form interface
+provided here.
+
+This Ariba task prepares reference data for use with the task ``run`` that is at the core of our
+gene extraction tool. The input can be either provided by the user, or downloaded offline using the task
+``getref`` of the Ariba command-line interface.
+
+This diagram shows the place of this tool in the overall NGS-MSTB workflow.
+
+.. image:: ${static_path}/images/ngs_mstb/wf_ariba_prepareref.png 
+    :width: 600
+
+-----------------
+
+``prepareref`` will do the following:
+
+1. Sanity check the input fasta file(s) and metadata file(s).
+   Inconsistent/bad data will be removed and reported in log files. If
+   this happens, a warning will be written to stderr. **It is important
+   to check any removed sequences and/or variants. If you are missing a
+   gene from your final output after running ARIBA, please check that it
+   was not removed by ``prepareref``. If you are not using CD-HIT clustering
+   or metadata file \(default state in our Galaxy tool\), then this step
+   should not remove any input sequences unless they violate the length cutoffs.**
+
+2. Optionally, run cd-hit on the sequences that pass stage 1. An independent run of
+   cd-hit is carried out for each the four groups of reference
+   sequences: non-coding and variant only, non-coding and presence
+   absence, gene and vairant only, gene and presence/absence.
+
+How to use it
+=============
+
+Using downloaded data
+---------------------
+
+Assuming ``ariba getref`` was run with the output files prefix
+``getref_out``, then run ``prepareref`` with ``getref_out.fa``
+and ``getref_out.tsv`` as FASTA and metadata files
+respectively.
+
+User-provided data - FASTA only
+-------------------------------
+
+You can use a FASTA file as the only input if you select the option
+to treat sequences as all coding or all non-coding.
+If you have a mix of genes and non-coding sequences, or associated
+variants of interest, this information must be supplied in a metadata
+file. See the next section.
+
+User-provided data - FASTA and metadata
+---------------------------------------
+
+Every reference sequence in the FASTA file must have at least one corresponding
+entry in the metadata file.
+
+Reference sequences
+~~~~~~~~~~~~~~~~~~~
+
+Reference sequences can either be non-coding or genes (but must always
+be nucleotide sequences). Gene sequences will have extra analysis
+performed, for example looking for non-synonymous amino acid changes.
+
+Additionally, reference sequences can be either of:
+
+1. Presence/absence sequences. ARIBA will look for these sequences in
+   the input reads and report any that it finds, and also any variants
+   between these sequences and the input reads.
+
+2. Variants only sequences. These should have known variant details
+   specified in the metadata file (see below). ARIBA reports only when
+   it finds at least one of the given variants in each of these these
+   sequences. If a sample has one of these sequences, but does not have
+   one of the supplied variants, then it is not reported. If you supply
+   a variants only sequence, but no variant, then the sequence will be
+   removed during sanity checks.
+
+The sequence names must be unique. Sequence names
+in the FASTA file must match exactly to the names in the metadata.
+
+Metadata
+~~~~~~~~
+
+A metadata file must be tab-delimited and consist of six columns:
+
+1. Sequence name. This must match the name used in the FASTA file.
+
+2. A ``0`` or ``1`` to indicate whether or not this is a gene. Use ``0``
+   for a non-coding sequence and ``1`` for a gene.
+
+3. A ``0`` or ``1`` to indicate if this is a presence/absence sequence
+   or a variants only sequence. Use ``0`` for presence/absence and ``1``
+   for variants only.
+
+4. If this line is describing a variant, put it here in the form 'wild
+   type''position''variant type', for example K10L. Put a "." if this
+   line is not describing a variant. The reference sequence must have
+   either the wild type or variant type at the given position, otherwise
+   the variant will be removed during sanity checks. If the sequence is
+   a gene (``1`` in column 2), this is taken to be an amino acid change.
+   If the sequence is non-coding (``0`` in column 2), this is taken to
+   be a nucleotide change.
+
+5. Variants can be put into groups. This is the group name for this
+   variant. To not put it into a group, use ".". This can be useful when
+   summarising across several runs. Suppose there are two alleles for a
+   gene, both of which confer the same resistance if they have a
+   particular SNP. Putting those SNPs in the same group allows ARIBA to
+   track them as a group and simply report whether each sample has any
+   variant from the group at the summary stage.
+
+6. Free text that can be used to describe the sequence and/or the
+   variant. Put a "." if you do not want to provide a description.
+
+More than one line can be used for each reference sequence, for when
+there are multiple variants or descriptions.
+
+Here are some example lines:
+
+-  To just describe the sequence, but no variant:
+
+   ``sequence1 1 0 . . this is a description of sequence1``
+
+   ie this is a presence/absence gene and we are simply giving a
+   description, not a variant.
+
+-  A nucleotide variant:
+
+   ``sequence2 0 0 A42G group1 description of variant``
+
+   ie this is a non-coding sequence where the wild type is an A at
+   position 42 and we are interested if there is a G at that position.
+   We have put the variant into a group called "group1".
+
+-  An amino acid variant in a gene
+
+   ``sequence3 1 1 I10L . .``
+
+   ie the wild type is an I at position 10 of the amino acid sequence.
+   The 1 in column 3 indicates that it is a variants-only gene, which
+   means we are only interested in the given amino acid change. In this
+   example, no description and no group have been given.
+
+Reference sequence and cluster names
+------------------------------------
+
+When the ARIBA pipeline is run, it must give each cluster a name. This
+is the method used to name the clusters:
+
+1. Gather everything up to the first dot (.) in the name of each
+   sequence in the cluster.
+
+2. If everything in (1) is the same, use that name. Otherwise, look for
+   a common prefix for everything in (1). If there is a common prefix,
+   then use it, but add "-" on the end of the common prefix.
+
+3. If there was no common prefix, take the most common string from (1),
+   and add "+" on the end to indicate there were other names.
+
+However, cluster names must be at least 3 characters long. If everything
+above fails, then the cluster is simply called "cluster". To avoid
+non-unique cluster names, -1, -2, -3 etc is appended to the cluster
+names where necessary.
+
+When downloading a supported reference using ``getref``, Ariba attempts to
+name the sequences in such a way as to result in "sensible" cluster
+names. This usually works, however, there are always a few sequence
+names where a sensible name cannot be automatically assigned.
+
+</help>
+<citations>
+
+<citation type="bibtex">@ARTICLE{hunt2017ariba,
+title={ARIBA: rapid antimicrobial resistance genotyping directly from sequencing reads},
+author={Hunt, Martin and Mather, Alison E and S{\'a}nchez-Bus{\'o}, Leonor and Page, Andrew J and Parkhill, Julian and Keane, Jacqueline A and Harris, Simon R},
+journal={Microbial genomics},
+volume={3},
+number={10},
+year={2017},
+publisher={Microbiology Society}
+}</citation>
+   
+</citations>
+
+</tool>

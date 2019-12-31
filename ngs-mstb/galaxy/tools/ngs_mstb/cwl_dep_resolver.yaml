@@ -1,0 +1,2 @@
+- type: galaxy_packages
+  base_path: /ngs-mstb/galaxy/tools/ngs_mstb/deps

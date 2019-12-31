@@ -1,0 +1,28 @@
+From d06b221905cc4eb935939c6a29685c0dff125bf8 Mon Sep 17 00:00:00 2001
+From: Andrey Tovchigrechko <andreyto@gmail.com>
+Date: Wed, 25 Jul 2018 15:38:33 -0400
+Subject: [PATCH] Convert tool parameter XML attribute 'hidden' into the
+ correct boolean Python type. Previously it was converted into string, and in
+ the logical predicates any non-empty value would always evaluate to True.
+ This fix allows using the 'hidden' attribute in parameterized XML macros with
+ 'true' or 'false' passed as a macros parameter. This in turns allows hiding
+ some form fields (after setting default values) based on choices picked in
+ conditional switches.
+
+---
+ lib/galaxy/tools/parameters/basic.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lib/galaxy/tools/parameters/basic.py b/lib/galaxy/tools/parameters/basic.py
+index 7f42f0e1d9c..dbe9e7336a9 100644
+--- a/lib/galaxy/tools/parameters/basic.py
++++ b/lib/galaxy/tools/parameters/basic.py
+@@ -94,7 +94,7 @@ def __init__(self, tool, input_source, context=None):
+         self.argument = input_source.get("argument")
+         self.name = self.__class__.parse_name(input_source)
+         self.type = input_source.get("type")
+-        self.hidden = input_source.get("hidden", False)
++        self.hidden = input_source.get_bool("hidden", False)
+         self.refresh_on_change = input_source.get_bool("refresh_on_change", False)
+         self.optional = input_source.parse_optional()
+         self.is_dynamic = False

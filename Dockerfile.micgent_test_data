@@ -1,0 +1,3 @@
+FROM scratch
+ADD micgent_large_test_data /micgent_large_test_data
+VOLUME ["/micgent_large_test_data"]

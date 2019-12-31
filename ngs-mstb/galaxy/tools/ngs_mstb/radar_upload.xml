@@ -1,0 +1,99 @@
+<tool id="radar_upload" 
+    name="Upload extracted genes into RADAR"
+    profile="17.05"
+    version="1.0.0">
+    <description>The output data pack produced by the target gene extraction tool
+        will be directly uploaded from a Galaxy server into a RADAR server.
+    </description>
+    <requirements>
+        <requirement type="package" version="1.0">ngs-mstb</requirement>
+    </requirements>
+    <command><![CDATA[
+    @CHEETAH_LIB@
+        $check_sig($res_pack)
+        &&
+        $galaxy_provenance_out($galaxy_provenance,'provenance/radar_upload')
+        &&
+        python -m MICGENT.gene_extractor
+        --config '$__tool_directory__/ngs_mstb.yaml'
+        radar-upload
+        '$res_pack'
+        '$stage'
+        '$department'
+        '$project_code'
+        '$study_code'
+        '$timestamp'
+        '$__user_email__'
+        'provenance/radar_upload'
+        &&
+        echo OK > $upload_status
+        ]]>
+    </command>
+    <macros>
+        <!-- ATTENTION: Indent the next import tag to the start of the line to avoid getting extra indents
+        from the imported Cheetah functions, which can break generated YAML configs -->
+<import>ngs_mstb.xml</import>
+        <token name="@OUTPUT_LABEL@">on ${on_string} (${res_pack.name})</token>
+    </macros>
+    <inputs>
+        <param name="res_pack" format="ngs_mstb_radar_pack.tar"
+            type="data"
+            label="Extracted genes pack for RADAR upload"
+            help="Make it with Gene Extractor tool"
+        />
+        <param name="stage" size="10" type="text" value="CD" label="Stage">
+            <validator type="empty_field" message="Need a defined value"/>        
+        </param>
+        <param name="department" size="10" type="text" value="ID" label="Department">
+            <validator type="empty_field" message="Need a defined value"/>                    
+        </param>
+        <param name="project_code" size="10" type="text" label="Project Code">
+            <validator type="empty_field" message="Need a defined value"/>                    
+        </param>
+        <param name="study_code" size="20" type="text" label="Study Code">
+            <validator type="empty_field" message="Need a defined value"/>             
+        </param>
+        <param name="timestamp" size="12" type="text" label="Timestamp"
+            help="Timestamp string that will be added as a suffix to the
+            dataset name in RADAR and must contain, concatenated without
+            delimiteres, the following information: Year as four digits,
+            Month as two digits, Day as two digits, Hour as two digits in
+            24 hr format, Minutes as two digits. In other words, the 
+            pattern is YYYYMMDDHHMM.
+            Example: 201810161812.">
+            <!-- Python expression in validator tag is sensitive to the indent - keep it next to
+            the preceding closing xml bracket. Be careful also with what Python operators need to be escaped
+            with XML codes -->
+                <validator type="expression"
+                           message="Timestamp in a format YYYYMMDDHHMM is required"
+                    >value and len(value.strip()) == 12 and value.strip().isdigit()</validator>
+        </param>
+    </inputs>
+	<outputs>
+        <data name="upload_status" format="tabular" 
+            label="Upload status @OUTPUT_LABEL@"/>
+        <data name="galaxy_provenance" format="txt" 
+            label="Galaxy Provenance Data @OUTPUT_LABEL@"
+            help="Structured text dataset in YAML format with Galaxy provenance information that can be used
+            to recreate the inputs of this tool through the Galaxy User Interface.
+            This file is also automatically uploaded into RADAR when this tool is executed.
+            Please see the comment section at the top of the dataset for more information about 
+            its formatting and structure."/> 
+	</outputs>
+	<help>
+        What it does
+        ============
+
+        Uploads extracted genes or other consensus sequences into RADAR along with the captured provenance data.
+
+        RADAR serves as the secure System Of Record as well as the environment for
+        the downstream analysis of variation between consensus sequences.
+
+        The user name used to login into Galaxy will be used as the RADAR user name for the upload.
+        It must already exist in RADAR.
+
+        The timestamp should be assigned by the operator in order to label different assembly versions of the same
+        study code.
+	</help>
+</tool>
+

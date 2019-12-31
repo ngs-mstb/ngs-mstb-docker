@@ -1,0 +1,62 @@
+<macros>
+	<xml name="preset_inputs">
+        <conditional name="cond_preset">
+            <param name="preset" type="select" label="Parameter Preset"
+                   help="You can select a set of predefined values of other parameters with this preset. Names that
+                   start with the word Validated signify presets for which the
+                   values of various parameters have been validated and fixed. Upon selection of such a preset, 
+                   those fixed parameters
+                   will be hidden from this tool's input form. You can view the final values of all parameters, both
+                   visible and hidden,
+                   after you submit the job by clicking on the Info icon of the output dataset.
+                   Within the research deployment, the list of presets will also 
+                   contain some entries that start with the word Unvalidated. Those entries will make both visible
+                   and editable all other parameters but will set their initial values to some pre-defined 
+                   defaults.">
+              <option value="unval_generic_amp" selected="true">Unvalidated Generic Targets Amplicon Shotgun</option>                   
+              <option value="unval_generic_wgs" selected="true">Unvalidated Generic Targets WGS</option>
+              <option value="val_sa_at" selected="false">Validated Staphylococcus aureus Alpha-Toxin gene</option>
+            </param>
+            <yield/>
+        </conditional>
+	</xml>
+	<xml name="preset_inputs_gene_extractor">
+	  <expand macro="preset_inputs">
+	    <when value="unval_generic_amp">
+	      <expand macro="macro_validated_mode_inputs" hide_options="false" assembly_policy_wgs_fermilite="false" assembly_policy_amplicon="true" multiseq_policy_accept="true"/>
+	    </when>
+	    <when value="unval_generic_wgs">
+	      <expand macro="macro_validated_mode_inputs" hide_options="false" assembly_policy_wgs_fermilite="true" multiseq_policy_accept="true"/>
+	    </when>
+	    <when value="val_sa_at">
+	      <expand macro="macro_validated_mode_inputs" hide_options="true" assembly_policy_wgs_fermilite="true" multiseq_policy_accept="false" multiseq_policy_reject="true"/>
+	    </when>
+      </expand>
+  </xml>
+	<xml name="preset_inputs_ariba_prepareref">
+	  <expand macro="preset_inputs">
+	    <when value="unval_generic_amp">
+	      <expand macro="macro_validated_mode_inputs" hide_options="false" all_coding="false" all_non_coding="true"/>
+	    </when>
+	    <when value="unval_generic_wgs">
+	      <expand macro="macro_validated_mode_inputs" hide_options="false"/>
+	    </when>
+	    <when value="val_sa_at">
+	      <expand macro="macro_validated_mode_inputs" hide_options="true" all_coding="true"/>
+	    </when>
+      </expand>
+  </xml> 
+  <xml name="preset_inputs_make_seq_manifest">
+    <expand macro="preset_inputs">
+      <when value="unval_generic_amp">
+        <expand macro="macro_validated_mode_inputs" hide_options="false"/>
+      </when>
+      <when value="unval_generic_wgs">
+        <expand macro="macro_validated_mode_inputs" hide_options="false"/>
+      </when>
+      <when value="val_sa_at">
+        <expand macro="macro_validated_mode_inputs" hide_options="true"/>
+      </when>
+      </expand>
+  </xml>         
+</macros>
