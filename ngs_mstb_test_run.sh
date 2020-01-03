@@ -29,6 +29,9 @@ if ! check_slurmd; then
   wait_for_slurm
 fi
 
+## test_run might be a bind-mount, so we need to make sure galaxy user can write to it:
+chown -R galaxy. $NGS_MSTB_TEST_WORK/micgent/python/test_run
+
 ## do not use -i here - this causes Galaxy's internal Conda to be used in tests
 sudo -u galaxy bash << EOF
 cd $NGS_MSTB_TEST_WORK/micgent/python
