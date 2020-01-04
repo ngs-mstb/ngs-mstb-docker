@@ -3,6 +3,7 @@ FROM docker.io/bgruening/galaxy-stable:19.05
 ADD build_data_files/build_no_pkgs.tar.gz /
 ADD build_data_files/micgent_db /build/micgent_db
 RUN mkdir -p /seqstore/data
+RUN ln -s $EXPORT_DIR/ftp /seqstore/ftp
 ADD build_data_files/test_data /seqstore/test_data
 ADD build_data_files/example_out.tar.gz ${GALAXY_ROOT}/static/
 
