@@ -24,7 +24,7 @@
         $bind_arg("cond_preset.adv.sample_id_prefix")
         $bind_arg("cond_preset.adv.samp_id_nomatch")
         $bind_arg("out_file_rejected")
-        '$cond_preset.path'
+        '$adjust_manifest_path($cond_preset.path,$__user_email__)'
         &&
         $compute_sig($out_file)        
         ]]>
@@ -41,7 +41,10 @@
                 help="This pattern should match all files that you want to include.
                 It should be relative to the data store root.
                 Example: test_data/rsv/INF2019_CTR/INF2019_CTR_NGS/*.fastq.gz.
-                See Help for alternative layout">
+                See Help for alternative layout. Pattern that starts with ftp/
+                will cause the remainder of the pattern to be searched for under
+                the FTP (or SFTP) directory of the currently logged in user
+                assuming that the FTP has been properly configured in this Galaxy server.">
                 <!-- The Python tool code checks that the relative path passed from here is safe.
                  The check is a bit more involved than simply rejecting .. in file names because
                  .. can be simply a double dot in the file name itself, not the upper dir reference.

@@ -1,6 +1,7 @@
 run_extraction_wf:
   micgent_data: /build/micgent_db
   datadir: /seqstore
+  allowed_roots: /seqstore,/export/ftp
   cwl_runner_name: toil
   cwl_runner_config: /ngs-mstb/galaxy/tools/ngs_mstb/cwl_runner.yaml
   sig_inp_key: '123'
@@ -10,3 +11,4 @@ radar_upload: &anchor
 radar_check_user: *anchor
 iterate_sequence_run:
   from_dir: /seqstore
+  allowed_roots: /seqstore,/export/ftp

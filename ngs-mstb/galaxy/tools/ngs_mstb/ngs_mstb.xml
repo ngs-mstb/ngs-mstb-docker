@@ -99,5 +99,15 @@ $prov_cmd_base() '--job-id' '$job_id' '--out-job-yaml' '$out_dir/job.yaml' '--ou
 cp '$out_dir/job_user.yaml' '$dataset'
 #end def
 
+#def adjust_manifest_path($path,$user_email)
+#set $parts = $path.split("/",1)
+#if $path.startswith("ftp/"):
+#assert $user_email
+$parts[0]/$user_email/$parts[1]#slurp
+#else
+$path#slurp
+#end if
+#end def
+
 </token>
 </macros>
