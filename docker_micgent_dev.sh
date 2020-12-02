@@ -14,9 +14,13 @@ export EXPORT_TEST_RUN="$NGS_MSTB_DEPLOY_ROOT/../ngs_mstb_test_run"
 
 mkdir -p "$EXPORT_TEST_RUN"
 
-docker run --rm --name ngs-mstb \
+docker run -it --rm --name ngs-mstb \
+    -v "$NGS_MSTB_DEPLOY_ROOT"/micgent/:/home/galaxy/work/micgent/ \
+    -v "$NGS_MSTB_DOCKER_DIR"/ngs_mstb_test_run.sh:/usr/bin/ngs_mstb_test_run.sh \
     -v ${EXPORT_TEST_DATA}:/home/galaxy/work/test_data \
     -v ${EXPORT_TEST_RUN}:/home/galaxy/work/micgent/python/test_run \
-    -v "$NGS_MSTB_DOCKER_DIR"/ngs_mstb_test_run.sh:/usr/bin/ngs_mstb_test_run.sh \
+    -e NGS_MSTB_TEST_MODE=DEV \
+    -e NGS_MSTB_TEST_SLURM=NO \
     ${NGS_MSTB_DOCKER_IMAGE}:${NGS_MSTB_DOCKER_TAG:-latest} \
-    ngs_mstb_test_run.sh
+    bash /usr/bin/ngs_mstb_test_run.sh
+

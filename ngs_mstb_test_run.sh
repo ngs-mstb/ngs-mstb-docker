@@ -13,6 +13,9 @@ set -ex -o pipefail
 ## to run that script first in a detached mode
 ## and spin-wait for Slurm
 
+NGS_MSTB_TEST_MODE=${NGS_MSTB_TEST_MODE:=TEST}
+NGS_MSTB_TEST_SLURM=${NGS_MSTB_TEST_SLURM:=YES}
+
 function check_slurmd {
   ps -el | grep -q slurmctld
 }
@@ -24,20 +27,38 @@ function wait_for_slurm {
   echo "Slurm is up"
 }
 
-if ! check_slurmd; then
-  nohup /usr/bin/ngs_mstb_startup.sh 2>&1 >/dev/null &
-  wait_for_slurm
+if [[ "$NGS_MSTB_TEST_SLURM" == YES ]]; then
+  if ! check_slurmd; then
+    nohup /usr/bin/ngs_mstb_startup.sh 2>&1 >/dev/null &
+    wait_for_slurm
+  fi
 fi
 
 ## test_run might be a bind-mount, so we need to make sure galaxy user can write to it:
 chown -R galaxy. $NGS_MSTB_TEST_WORK/micgent/python/test_run
 
-## do not use -i here - this causes Galaxy's internal Conda to be used in tests
-sudo -u galaxy bash << EOF
-cd $NGS_MSTB_TEST_WORK/micgent/python
+if [[ "$NGS_MSTB_TEST_MODE" == TEST ]]; then
 
+## do not use -i here - this causes Galaxy's internal Conda to be used in tests
+sudo -u galaxy bash <<EOF
+cd $NGS_MSTB_TEST_WORK/micgent/python
 . /build/mc3/etc/profile.d/conda.sh
 conda activate ngs-mstb
-../scripts/ngs-mstb/run_tests_gene_extractor.sh  $NGS_MSTB_TEST_WORK/test_data  \
-  2>&1 | tee test_run/test_out.log
+  ../scripts/ngs-mstb/run_tests_gene_extractor.sh  $NGS_MSTB_TEST_WORK/test_data  \
+    2>&1 | tee test_run/test_out.log
 EOF
+
+else
+
+echo "galaxy ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+cd $NGS_MSTB_TEST_WORK/micgent/python
+cat <<EOF > ngs_mstb_init.sh
+cd $NGS_MSTB_TEST_WORK/micgent/python
+. /build/mc3/etc/profile.d/conda.sh
+conda activate ngs-mstb
+sudo -E PATH="\$PATH" LD_LIBRARY_PATH="\$LD_LIBRARY_PATH" /build/mc3/envs/ngs-mstb/bin/pip install --no-deps -e .
+EOF
+sudo -u galaxy bash --init-file ngs_mstb_init.sh
+
+fi
+
